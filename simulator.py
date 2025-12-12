@@ -2,9 +2,10 @@ import requests
 import time
 from datetime import datetime, timezone
 import random
+from app.core.config import BASE_URL  # import BASE_URL from config
 
-# Replace with your FastAPI endpoint (ngrok or localhost)
-API_URL = "https://widowly-conception-runnier.ngrok-free.dev/telematics/"
+# Automatically use BASE_URL from .env
+API_URL = BASE_URL.rstrip("/") + "/"   # ensure trailing slash
 
 # Vehicle ID for this simulator
 VEHICLE_ID = "vehicle_001"
@@ -25,15 +26,15 @@ def simulate_speed():
 def send_point(lat, lon, speed):
     timestamp = datetime.now(timezone.utc).isoformat()
     point = {
-        "vehicle_id": VEHICLE_ID,   # Required field!
+        "vehicle_id": VEHICLE_ID,
         "latitude": round(lat, 6),
         "longitude": round(lon, 6),
         "speed": speed,
         "timestamp": timestamp
     }
     try:
-        response = requests.post(API_URL, json=point)
-        print(f"Sent: {point} | Status: {response.status_code}")
+        response = requests.post(f"{API_URL}create", json=point)
+        print(f"Sent: {point} | Status: {response.status_code} | Response: {response.text}")
     except Exception as e:
         print("Error sending point:", e)
 
@@ -41,4 +42,4 @@ def send_point(lat, lon, speed):
 for lat, lon in route:
     speed = simulate_speed()
     send_point(lat, lon, speed)
-    time.sleep(1)  # wait 1 sec between points
+    time.sleep(1)
