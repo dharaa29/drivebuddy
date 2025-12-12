@@ -1,11 +1,20 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
 import math
 import uuid
 
-app = FastAPI(title="Telematics API", version="0.4.0")
+app = FastAPI(title="Telematics API", version="0.4.1")
+
+# ------------------------
+# Root endpoint
+# ------------------------
+@app.get("/")
+def root():
+    # Redirect to Swagger UI
+    return RedirectResponse("/docs")
 
 # ------------------------
 # Pydantic Models
