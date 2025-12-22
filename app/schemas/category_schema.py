@@ -1,40 +1,36 @@
-from pydantic import BaseModel, Field
-from enum import Enum
+from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+from app.enums.status_enum import Status
 
-class StatusEnum(str, Enum):
-    Active = "Active"
-    Inactive = "Inactive"
-
-
-class CategoryBase(BaseModel):
-    name: str = Field(..., min_length=1)
+class CategoryCreate(BaseModel):
+    name: str
     description: Optional[str] = None
     slug: str
-    status: StatusEnum = StatusEnum.Active
-
-
-class CategoryCreate(CategoryBase):
+    status: Status = Status.Active
     createdBy: str
 
 
 class CategoryUpdate(BaseModel):
-    name: Optional[str]
-    description: Optional[str]
-    slug: Optional[str]
-    status: Optional[StatusEnum]
+    name: Optional[str] = None
+    description: Optional[str] = None
+    slug: Optional[str] = None
+    status: Optional[Status] = None
     updatedBy: str
 
 
-class CategoryResponse(CategoryBase):
+class CategoryResponse(BaseModel):
     categoryId: str
+    name: str
+    description: Optional[str]
+    slug: str
+    status: Status
     isDelete: bool
     createdBy: str
-    updatedBy: Optional[str] = None
+    updatedBy: Optional[str]
     createdAt: datetime
     updatedAt: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True   # Pydantic v2

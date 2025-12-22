@@ -1,46 +1,68 @@
 from fastapi import APIRouter, HTTPException
+from typing import List
+from datetime import datetime
+import uuid
+from app.enums.status_enum import Status
 from app.schemas.category_schema import CategoryCreate, CategoryUpdate, CategoryResponse
-from app.controllers.category_controller import (
-    create_category,
-    get_all_categories,
-    get_category_by_id,
-    update_category,
-    delete_category
+router = APIRouter(
+    prefix="/categories",
+    tags=["Categories"]
 )
 
-router = APIRouter(prefix="/categories", tags=["Categories"])
+# In-memory storage
+categories_db: List[CategoryResponse] = []
 
+# -------- GET ALL --------
+@router.get("/", response_model=List[CategoryResponse])
+def get_all_categories():
+    return [cat for cat in categories_db if not cat.isDelete]
 
-@router.post("/", response_model=CategoryResponse)
-def create(payload: CategoryCreate):
-    category = create_category(payload.dict())
-    return category  # directly return the dict
-
-
-@router.get("/", response_model=list[CategoryResponse])
-def get_all():
-    return get_all_categories()
-
-
+# -------- GET BY ID --------
 @router.get("/{category_id}", response_model=CategoryResponse)
-def get_by_id(category_id: str):
-    category = get_category_by_id(category_id)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return category
+def get_category(category_id: str):
+    for cat in categories_db:
+        if cat.categoryId == category_id and not cat.isDelete:
+            return cat
+    raise HTTPException(status_code=404, detail="Category not found")
 
+# -------- CREATE --------
+@router.post("/", response_model=CategoryResponse)
+def create_category(category: CategoryCreate):
+    new_category = CategoryResponse(
+        categoryId=str(uuid.uuid4()),
+        name=category.name,
+        description=category.description,
+        slug=category.slug,
+        status=category.status,
+        isDelete=False,
+        createdBy=category.createdBy,
+        updatedBy=None,
+        createdAt=datetime.utcnow(),
+        updatedAt=None
+    )
+    categories_db.append(new_category)
+    return new_category
 
-@router.put("/{category_id}", response_model=dict)
-def update(category_id: str, payload: CategoryUpdate):
-    updated = update_category(category_id, payload.dict(exclude_unset=True))
-    if not updated:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return {"message": "Category updated successfully"}
+# -------- UPDATE --------
+@router.put("/{category_id}", response_model=CategoryResponse)
+def update_category(category_id: str, category_update: CategoryUpdate):
+    for cat in categories_db:
+        if cat.categoryId == category_id and not cat.isDelete:
+            if category_update.name: cat.name = category_update.name
+            if category_update.description: cat.description = category_update.description
+            if category_update.slug: cat.slug = category_update.slug
+            if category_update.status: cat.status = category_update.status
+            cat.updatedBy = category_update.updatedBy
+            cat.updatedAt = datetime.utcnow()
+            return cat
+    raise HTTPException(status_code=404, detail="Category not found")
 
-
-@router.delete("/{category_id}", response_model=dict)
-def delete(category_id: str, updatedBy: str):
-    deleted = delete_category(category_id, updatedBy)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return {"message": "Category deleted successfully"}
+# -------- DELETE --------
+@router.delete("/{category_id}")
+def delete_category(category_id: str):
+    for cat in categories_db:
+        if cat.categoryId == category_id and not cat.isDelete:
+            cat.isDelete = True
+            cat.updatedAt = datetime.utcnow()
+            return {"detail": "Category deleted successfully"}
+    raise HTTPException(status_code=404, detail="Category not found")

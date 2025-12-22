@@ -1,61 +1,61 @@
-import uuid
+from fastapi import APIRouter, HTTPException
+from typing import List
 from datetime import datetime
+import uuid
+
+from app.schemas.category_schema import CategoryCreate, CategoryUpdate, CategoryResponse
 from app.models.category_model import category_model
-from app.db.database import get_collection
 
-# MongoDB collection
-category_collection = get_collection("categories")
+router = APIRouter(
+    prefix="/categories",
+    tags=["Categories"]
+)
 
+# In-memory storage
+categories: List[dict] = []
 
-def create_category(payload: dict):
-    """Create a new category and save to MongoDB"""
-    payload["categoryId"] = str(uuid.uuid4())
-    payload["isDelete"] = False
-    payload["createdAt"] = datetime.utcnow()
-    payload["updatedAt"] = None
-    category = category_model(payload)
-    category_collection.insert_one(category)
-    return category
-
-
+# -------- GET ALL --------
+@router.get("/", response_model=List[CategoryResponse])
 def get_all_categories():
-    """Return all non-deleted categories"""
-    categories = []
-    for category in category_collection.find({"isDelete": False}):
-        category["_id"] = str(category["_id"])
-        categories.append(category)
     return categories
 
+# -------- GET BY ID --------
+@router.get("/{category_id}", response_model=CategoryResponse)
+def get_category(category_id: str):
+    for cat in categories:
+        if cat["categoryId"] == category_id and not cat["isDelete"]:
+            return cat
+    raise HTTPException(status_code=404, detail="Category not found")
 
-def get_category_by_id(category_id: str):
-    """Get a single category by categoryId"""
-    category = category_collection.find_one(
-        {"categoryId": category_id, "isDelete": False},
-        {"_id": 0}
-    )
-    return category
+# -------- CREATE --------
+@router.post("/", response_model=CategoryResponse)
+def create_category(category: CategoryCreate):
+    new_category = category_model({
+        "categoryId": str(uuid.uuid4()),
+        **category.dict()
+    })
+    categories.append(new_category)
+    return new_category
 
+# -------- UPDATE --------
+@router.put("/{category_id}", response_model=CategoryResponse)
+def update_category(category_id: str, category_update: CategoryUpdate):
+    for idx, cat in enumerate(categories):
+        if cat["categoryId"] == category_id and not cat["isDelete"]:
+            updated_cat = cat.copy()
+            updated_data = category_update.dict(exclude_unset=True)
+            updated_cat.update(updated_data)
+            updated_cat["updatedAt"] = datetime.utcnow()
+            categories[idx] = updated_cat
+            return updated_cat
+    raise HTTPException(status_code=404, detail="Category not found")
 
-def update_category(category_id: str, payload: dict):
-    """Update a category"""
-    payload["updatedAt"] = datetime.utcnow()
-    result = category_collection.update_one(
-        {"categoryId": category_id, "isDelete": False},
-        {"$set": payload}
-    )
-    return result.modified_count > 0
-
-
-def delete_category(category_id: str, updated_by: str):
-    """Soft delete a category"""
-    result = category_collection.update_one(
-        {"categoryId": category_id},
-        {
-            "$set": {
-                "isDelete": True,
-                "updatedBy": updated_by,
-                "updatedAt": datetime.utcnow(),
-            }
-        }
-    )
-    return result.modified_count > 0
+# -------- DELETE --------
+@router.delete("/{category_id}")
+def delete_category(category_id: str):
+    for cat in categories:
+        if cat["categoryId"] == category_id and not cat["isDelete"]:
+            cat["isDelete"] = True
+            cat["updatedAt"] = datetime.utcnow()
+            return {"detail": "Category deleted"}
+    raise HTTPException(status_code=404, detail="Category not found")

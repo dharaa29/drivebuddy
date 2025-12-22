@@ -1,13 +1,13 @@
 from datetime import datetime
-from app.enums.status_enum import Status
+from app.enums.status_enum import StatusEnum
 
-def category_model(data: dict) -> dict:
+def tag_model(data: dict) -> dict:
     return {
-        "categoryId": data.get("categoryId"),
+        "tagId": data.get("tagId"),
         "name": data["name"],
         "description": data.get("description"),
         "slug": data["slug"],
-        "status": data.get("status", Status.Active),  # <- fixed
+        "status": data.get("status", StatusEnum.Active),
         "isDelete": False,
         "createdBy": data["createdBy"],
         "updatedBy": None,

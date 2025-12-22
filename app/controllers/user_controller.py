@@ -1,31 +1,52 @@
 from fastapi import HTTPException
-import bcrypt
-from app.schemas.user_schema import User
-from app.db.database import get_collection
+from typing import List
+from datetime import datetime
+import uuid
 
-user_collection = get_collection("users")
+from app.schemas.user_schema import UserCreate, UserUpdate, UserResponse
+from app.models.user_model import user_model
 
-def create_user(user: User):
-    # Duplicate checks
-    if user_collection.find_one({"email": user.email}):
-        raise HTTPException(status_code=400, detail="Email already exists")
 
-    if user_collection.find_one({"username": user.username}):
-        raise HTTPException(status_code=400, detail="Username already exists")
+# In-memory storage
+users: List[dict] = []
 
-    # Hash password
-    hashed_password = bcrypt.hashpw(
-        user.password.encode("utf-8"),
-        bcrypt.gensalt()
-    ).decode("utf-8")
+# -------- CREATE --------
+def create_user(user: UserCreate) -> dict:
+    new_user = user_model({
+        "userId": str(uuid.uuid4()),
+        **user.dict()
+    })
+    users.append(new_user)
+    return new_user
 
-    user_dict = user.dict()
-    user_dict["password"] = hashed_password
-
-    user_collection.insert_one(user_dict)
-
-    return {"message": "User created successfully"}
-
-def get_all_users():
-    users = list(user_collection.find({}, {"_id": 0}))
+# -------- GET ALL --------
+def get_all_users() -> List[dict]:
     return users
+
+# -------- GET BY ID --------
+def get_user(user_id: str) -> dict:
+    for u in users:
+        if u["userId"] == user_id and not u["isDelete"]:
+            return u
+    raise HTTPException(status_code=404, detail="User not found")
+
+# -------- UPDATE --------
+def update_user(user_id: str, user_update: UserUpdate) -> dict:
+    for idx, u in enumerate(users):
+        if u["userId"] == user_id and not u["isDelete"]:
+            updated_user = u.copy()
+            updated_data = user_update.dict(exclude_unset=True)
+            updated_user.update(updated_data)
+            updated_user["updatedAt"] = datetime.utcnow()
+            users[idx] = updated_user
+            return updated_user
+    raise HTTPException(status_code=404, detail="User not found")
+
+# -------- DELETE --------
+def delete_user(user_id: str):
+    for u in users:
+        if u["userId"] == user_id and not u["isDelete"]:
+            u["isDelete"] = True
+            u["updatedAt"] = datetime.utcnow()
+            return {"detail": "User deleted"}
+    raise HTTPException(status_code=404, detail="User not found")
