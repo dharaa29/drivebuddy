@@ -1,14 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime
 import uuid
 
 from app.schemas.blog_schema import BlogCreate, BlogUpdate, BlogResponse
 from app.enums.status_enum import BlogStatus
+from app.core.security import verify_api_key
 
 router = APIRouter(
     prefix="/blogs",
-    tags=["Blogs"]
+    tags=["Blogs"],
+    dependencies=[Depends(verify_api_key)]  # 🔐 PROTECTION
 )
 
 blogs_db: List[BlogResponse] = []
@@ -69,3 +71,4 @@ def delete_blog(blog_id: str):
             blog.updatedAt = datetime.utcnow()
             return {"detail": "Blog deleted successfully"}
     raise HTTPException(status_code=404, detail="Blog not found")
+    

@@ -119,3 +119,4 @@ def delete_telemetry_record(record_id: str):
             telemetry_data.pop(idx)
             return {"message": "Record deleted successfully"}
     raise HTTPException(status_code=404, detail="Record not found")
+
