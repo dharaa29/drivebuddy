@@ -4,7 +4,7 @@ from app.routers.user_router import router as user_router
 from app.routers.category_router import router as category_router
 from app.routers.blog_router import router as blog_router
 from app.routers.tag_router import router as tag_router
-from app.database import get_collection
+from app.db.database import get_collection
 
 app = FastAPI()
 

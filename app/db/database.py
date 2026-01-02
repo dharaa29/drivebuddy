@@ -1,7 +1,5 @@
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from app.database import get_collection
-
 import os
 
 load_dotenv()
@@ -10,7 +8,6 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 client = MongoClient(MONGO_URI)
 
-# 🔹 DEFINE DATABASE NAME
 db = client["drivebuddy"]
 
 def get_collection(name: str):
