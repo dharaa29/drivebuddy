@@ -1,5 +1,7 @@
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from app.database import get_collection
+
 import os
 
 load_dotenv()
