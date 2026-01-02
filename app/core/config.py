@@ -1,7 +1,13 @@
 import os
 from dotenv import load_dotenv
+from pymongo import MongoClient
 
-load_dotenv()  
+load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("DB_NAME", "telematics_db")
+MONGO_URI = os.getenv("MONGO_URI")
+
+client = MongoClient(MONGO_URI)
+
+db = client["drivebuddy"]     
+telematics_collection = db["telematics"]  
+
